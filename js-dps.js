@@ -51,6 +51,8 @@ function update(progress){
     
     if(state.pressedKeys.one){
         ctx.fillStyle = 'blue'
+    } else {
+        ctx.fillStyle = 'red'
     }
 
     if(canvas.height != window.innerHeight || height != canvas.height){
@@ -78,8 +80,9 @@ ctx.fillStyle = "red"
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-    
-    ctx.fillRect(100, 100, 10, 10)
+
+    ctx.fillRect(100, 100, 50, 50)
+    ctx.fillRect(200, 100, 50, 50)
 }
 
 function loop(timestamp){
