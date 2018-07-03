@@ -6,21 +6,31 @@ var height = window.innerHeight
 
 //Square position
 var state = {
-    x: (width / 2),
-    y: (height / 2),
     pressedKeys: {
-        left: false,
-        right: false,
-        up: false,
-        down: false
+        zero: false,
+        one: false,
+        two: false,
+        three: false,
+        four: false,
+        five: false,
+        six: false,
+        seven: false,
+        eight: false,
+        nine: false
     }
 }
 
 var keyMap = {
-    68: 'right',
-    65: 'left',
-    87: 'up',
-    83: 'down'
+    48: 'zero',
+    49: 'one',
+    50: 'two',
+    51: 'three',
+    52: 'four',
+    53: 'five',
+    54: 'six',
+    55: 'seven',
+    56: 'eight',
+    57: 'nine'
 }
 
 function keydown(event){
@@ -39,31 +49,8 @@ window.addEventListener('keyup', keyup, false)
 //Update the state of the world for the elapsed time since last render
 function update(progress){
     
-    if(state.pressedKeys.left){
-        state.x -= progress
-    }
-    if(state.pressedKeys.right){
-        state.x += progress
-    }
-    if(state.pressedKeys.down){
-        state.y += progress
-    }
-    if(state.pressedKeys.up){
-        state.y -= progress
-    }
-
-    //Flip pos at boundries
-    if(state.x > width){
-        state.x -= width
-    } 
-    else if (state.x < 0){
-        state.x += width
-    }
-    if(state.y > height){
-        state.y -= height
-    } 
-    else if (state.y < 0){
-        state.y += height
+    if(state.pressedKeys.one){
+        ctx.fillStyle = 'blue'
     }
 
     if(canvas.height != window.innerHeight || height != canvas.height){
@@ -71,7 +58,6 @@ function update(progress){
         height = canvas.height
         ctx.fillStyle = "red"
     }
-
     if(canvas.width != window.innerWidth || width != canvas.width){
         canvas.width = window.innerWidth
         width = canvas.width
@@ -92,8 +78,8 @@ ctx.fillStyle = "red"
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-
-    ctx.fillRect(state.x - 5, state.y - 5, 10, 10)
+    
+    ctx.fillRect(100, 100, 10, 10)
 }
 
 function loop(timestamp){
