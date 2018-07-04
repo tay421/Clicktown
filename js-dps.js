@@ -20,7 +20,7 @@ var state = {
 
 //Rectangles for buttons at bottom of screen
 class Rectangle {
-    constructor(x, y, rheight, rwidth, number, color){
+    constructor(x, y, rheight, rwidth, number, color = 'red'){
         this.state = state
         this.height = rheight
         this.width = rwidth
@@ -28,17 +28,26 @@ class Rectangle {
         this.y = y
         this.number = number
         this.color = color
+        this.transitioning = false
+        this.pressed_color = 'blue'
+        this.pressed = false
     }
     drawRec() {
-        ctx.beginPath()
-        ctx.fillStyle = this.color
-        ctx.fillRect(this.x, this.y, this.height, this.width)
-        ctx.fill()
+        if(this.pressed){
+            ctx.beginPath()
+            ctx.fillStyle = this.pressed_color
+            ctx.fillRect(this.x, this.y, this.height, this.width)
+            ctx.fill()
+        } else {
+            ctx.beginPath()
+            ctx.fillStyle = this.color
+            ctx.fillRect(this.x, this.y, this.height, this.width)
+        }
     }
 }
 
 //Buffer Spaces
-var xbuff = 20
+var xbuff = 60
 var ybuff = 100
 
 //Variables surrounding the creation of rectangles
@@ -86,12 +95,13 @@ window.addEventListener('keyup', keyup, false)
 function update(progress){
     
     if(state.pressedKeys.one){
-        rect_array[0].color = 'blue'
-        rect_array[0].drwaRec()
+        rect_array[0].pressed = true
+        rect_array[0].drawRec()
     }
 
     if(state.pressedKeys.two){
-        rect_array[0].color = 'red'
+        rect_array[1].pressed = true
+        rect_array[1].drawRec()
     }
 
     //Set the canvas height and width to the size of the window
@@ -121,24 +131,26 @@ ctx.fillStyle = 'red'
 //Creates num_rec number of rectangle classes and stores them in rect_array
 function draw_recs(x, y, a, b, num_rec){
     for(i = 0; i < num_rec; i++){
-        var r = new Rectangle(x + (x_change * i), y, a, b, i)
+        let r = new Rectangle(x + (x_change * i), y, a, b, i)
         r.drawRec()
         rect_array.push(r)
     }
 }
 
-//Redraws rectangles in the array
-function redraw_recs(arr){
-    for(i = 0; i < arr.length; i++){
-        var r = arr[i]
-        r.drawRect()
+function redraw_stuffs(){
+    for(i = 0; i < rect_array.length; i++){
+        rect_array[i].drawRec()
     }
 }
 
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-    draw_recs(20, window.innerHeight - ybuff, 50, 50, amount_of_rectangles)
+    redraw_stuffs()
+}
+
+function init(){
+    draw_recs(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_rectangles)
 }
 
 //Basic game loops
@@ -151,6 +163,8 @@ function loop(timestamp){
     lastRender = timestamp
     window.requestAnimationFrame(loop)
 }
+
+init()
 
 var lastRender = 0
 window.requestAnimationFrame(loop)
