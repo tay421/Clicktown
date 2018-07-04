@@ -2,6 +2,9 @@
 var width = window.innerWidth
 var height = window.innerHeight
 
+//First pass, used in some of the ability and enemy functions
+var first_pass = true
+
 //Tracks if keys are pressed or not
 var state = {
     pressedKeys: {
@@ -25,8 +28,8 @@ function fadeColor(fraction){
     return 'rgb(' + 255 * percentage + ', 0,' + 255 * reverse_percentage + ')'
 }
 
-//Rectangles for buttons at bottom of screen
-class Rectangle {
+//Abilites for buttons at bottom of screen
+class Ability {
     constructor(x, y, rheight, rwidth, number, color = 'red'){
         this.state = state
         this.height = rheight
@@ -37,9 +40,10 @@ class Rectangle {
         this.transitioning = false
         this.pressed = false
         this.normal_color = 'red'
+        this.damage = 10
     }
-    //Draws the rectangle on the canvas
-    drawRec() {
+    //Draws the ability on the canvas
+    drawAbl() {
         if(this.pressed){
             ctx.beginPath()
             ctx.fillStyle = fadeColor(this.percent)
@@ -63,14 +67,26 @@ class Rectangle {
     }
 }
 
+class Grunt{
+    constructor(level){
+        this.health = Math.floor((Math.random * 100)+1)
+    }
+    get health(){
+        return this.health
+    }
+    set health(damage){
+        this.health -= damage
+    }
+}
+
 //Buffer Spaces
 var xbuff = 10
 var ybuff = 100
 
-//Variables surrounding the creation of rectangles
-var amount_of_rectangles = 10
+//Variables surrounding the creation of abilities
+var amount_of_abilities = 10
 var x_change = (window.innerWidth - xbuff) / 10
-var rect_array = []
+var abl_array = []
 
 
 //Basic keymap of all top keyboard numbers
@@ -107,34 +123,34 @@ window.addEventListener('keyup', keyup, false)
 function update(progress){
     //Detects keypresses
     if(state.pressedKeys.one){
-        rect_array[0].click()
+        abl_array[0].click()
     }
     if(state.pressedKeys.two){
-        rect_array[1].click()
+        abl_array[1].click()
     }
     if(state.pressedKeys.three){
-        rect_array[2].click()
+        abl_array[2].click()
     }
     if(state.pressedKeys.four){
-        rect_array[3].click()
+        abl_array[3].click()
     }
     if(state.pressedKeys.five){
-        rect_array[4].click()
+        abl_array[4].click()
     }
     if(state.pressedKeys.six){
-        rect_array[5].click()
+        abl_array[5].click()
     }
     if(state.pressedKeys.seven){
-        rect_array[6].click()
+        abl_array[6].click()
     }
     if(state.pressedKeys.eight){
-        rect_array[7].click()
+        abl_array[7].click()
     }
     if(state.pressedKeys.nine){
-        rect_array[8].click()
+        abl_array[8].click()
     }
     if(state.pressedKeys.zero){
-        rect_array[9].click()
+        abl_array[9].click()
     }
 
     //Set the canvas height and width to the size of the window
@@ -158,32 +174,42 @@ var width = canvas.width
 var height = canvas.height
 var ctx = canvas.getContext("2d")
 
-//Fills the rectangles once with red
+//Fills the abilities once with red
 ctx.fillStyle = 'red'
 
-//Creates num_rec number of rectangle classes and stores them in rect_array
-function draw_recs(x, y, a, b, num_rec){
-    for(i = 0; i < num_rec; i++){
-        let r = new Rectangle(x + (x_change * i), y, a, b, i)
-        r.drawRec()
-        rect_array.push(r)
+//Creates num_abl number of ability classes and stores them in abl_array
+function draw_abls(x, y, a, b, num_abl){
+    if(first_pass){
+        for(i = 0; i < num_abl; i++){
+            let r = new Ability(x + (x_change * i), y, a, b, i)
+            r.drawAbl()
+            abl_array.push(r)
+        }
+    } else {
+        for(i = 0; i < abl_array.length; i++){
+            abl_array[i].drawAbl()
+        }
     }
 }
 
-function redraw_rectangles(){
-    for(i = 0; i < rect_array.length; i++){
-        rect_array[i].drawRec()
-    }
+//Draws enemy(ies) on canvas
+function draw_enemies(){
+
 }
 
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-    redraw_rectangles()
+    draw_abls()
 }
 
 function init(){
-    draw_recs(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_rectangles)
+    //Draws important stuff on screen
+    draw_abls(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_abilities)
+    draw_enemies()
+
+    //All first pass logic should be above this variable
+    first_pass = false
     loop()
 }
 
