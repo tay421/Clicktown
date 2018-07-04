@@ -20,7 +20,7 @@ var state = {
 
 //Rectangles for buttons at bottom of screen
 class Rectangle {
-    constructor(x, y, rheight, rwidth, number, color = 'red'){
+    constructor(x, y, rheight, rwidth, number, color){
         this.state = state
         this.height = rheight
         this.width = rwidth
@@ -30,8 +30,10 @@ class Rectangle {
         this.color = color
     }
     drawRec() {
+        ctx.beginPath()
         ctx.fillStyle = this.color
         ctx.fillRect(this.x, this.y, this.height, this.width)
+        ctx.fill()
     }
 }
 
@@ -43,6 +45,8 @@ var ybuff = 100
 var amount_of_rectangles = 10
 var x_change = (window.innerWidth - xbuff) / 10
 var rect_array = []
+var first_pass = true
+var redraw = false
 
 
 //Basic keymap of all top keyboard numbers
@@ -75,12 +79,19 @@ function keyup(event){
 window.addEventListener('keydown', keydown, false)
 window.addEventListener('keyup', keyup, false)
 
+
+
 //Update the state of the world for the elapsed time since last render
+//TODO: Fix this so that only one rectangle actually changes color
 function update(progress){
     
     if(state.pressedKeys.one){
-        rect_array[1].color = 'blue'
-        rect_array[1].drawRec()
+        rect_array[0].color = 'blue'
+        rect_array[0].drwaRec()
+    }
+
+    if(state.pressedKeys.two){
+        rect_array[0].color = 'red'
     }
 
     //Set the canvas height and width to the size of the window
@@ -104,12 +115,23 @@ var width = canvas.width
 var height = canvas.height
 var ctx = canvas.getContext("2d")
 
+//Fills the rectangles once with red
+ctx.fillStyle = 'red'
+
 //Creates num_rec number of rectangle classes and stores them in rect_array
 function draw_recs(x, y, a, b, num_rec){
     for(i = 0; i < num_rec; i++){
         var r = new Rectangle(x + (x_change * i), y, a, b, i)
         r.drawRec()
         rect_array.push(r)
+    }
+}
+
+//Redraws rectangles in the array
+function redraw_recs(arr){
+    for(i = 0; i < arr.length; i++){
+        var r = arr[i]
+        r.drawRect()
     }
 }
 
