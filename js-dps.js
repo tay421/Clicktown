@@ -1,10 +1,8 @@
-//Simple moving square script
-
-//Width and height of square
+//Width and height of window
 var width = window.innerWidth
 var height = window.innerHeight
 
-//Square position
+//Tracks if keys are pressed or not
 var state = {
     pressedKeys: {
         zero: false,
@@ -20,6 +18,34 @@ var state = {
     }
 }
 
+//Rectangles for buttons at bottom of screen
+class Rectangle {
+    constructor(x, y, rheight, rwidth, number, color = 'red'){
+        this.state = state
+        this.height = rheight
+        this.width = rwidth
+        this.x = x
+        this.y = y
+        this.number = number
+        this.color = color
+    }
+    drawRec() {
+        ctx.fillStyle = this.color
+        ctx.fillRect(this.x, this.y, this.height, this.width)
+    }
+}
+
+//Buffer Spaces
+var xbuff = 20
+var ybuff = 100
+
+//Variables surrounding the creation of rectangles
+var amount_of_rectangles = 10
+var x_change = (window.innerWidth - xbuff) / 10
+var rect_array = []
+
+
+//Basic keymap of all top keyboard numbers
 var keyMap = {
     48: 'zero',
     49: 'one',
@@ -33,16 +59,19 @@ var keyMap = {
     57: 'nine'
 }
 
+//Detects keydown events
 function keydown(event){
     var key = keyMap[event.keyCode]
     state.pressedKeys[key] = true
 }
 
+//Detects keyup events
 function keyup(event){
     var key = keyMap[event.keyCode]
     state.pressedKeys[key] = false
 }
 
+//Adds event listener to detect key presses
 window.addEventListener('keydown', keydown, false)
 window.addEventListener('keyup', keyup, false)
 
@@ -50,41 +79,47 @@ window.addEventListener('keyup', keyup, false)
 function update(progress){
     
     if(state.pressedKeys.one){
-        ctx.fillStyle = 'blue'
-    } else {
-        ctx.fillStyle = 'red'
+        rect_array[1].color = 'blue'
+        rect_array[1].drawRec()
     }
 
+    //Set the canvas height and width to the size of the window
     if(canvas.height != window.innerHeight || height != canvas.height){
         canvas.height = window.innerHeight
-        height = canvas.height
-        ctx.fillStyle = "red"
+        height = canvas.height 
     }
     if(canvas.width != window.innerWidth || width != canvas.width){
         canvas.width = window.innerWidth
-        width = canvas.width
-        ctx.fillStyle = "red"
+        width = canvas.width 
     }
-    
 }
 
+//Get HTML canvas object
 var canvas = document.getElementById("canvas")
 
+//Set variables for basic drawing to HTML window
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 var width = canvas.width
 var height = canvas.height
 var ctx = canvas.getContext("2d")
-ctx.fillStyle = "red"
+
+//Creates num_rec number of rectangle classes and stores them in rect_array
+function draw_recs(x, y, a, b, num_rec){
+    for(i = 0; i < num_rec; i++){
+        var r = new Rectangle(x + (x_change * i), y, a, b, i)
+        r.drawRec()
+        rect_array.push(r)
+    }
+}
 
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-
-    ctx.fillRect(100, 100, 50, 50)
-    ctx.fillRect(200, 100, 50, 50)
+    draw_recs(20, window.innerHeight - ybuff, 50, 50, amount_of_rectangles)
 }
 
+//Basic game loops
 function loop(timestamp){
     var progress = timestamp - lastRender
 
@@ -94,9 +129,6 @@ function loop(timestamp){
     lastRender = timestamp
     window.requestAnimationFrame(loop)
 }
-
-console.log(canvas.width)
-console.log(canvas.height)
 
 var lastRender = 0
 window.requestAnimationFrame(loop)
