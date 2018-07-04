@@ -36,39 +36,35 @@ class Rectangle {
         this.number = number
         this.transitioning = false
         this.pressed = false
-        this.percent = 100
-        this.d = new Date()
-        this.t = this.d.getTime()
-        this.animating = false
+        this.normal_color = 'red'
     }
     //Draws the rectangle on the canvas
     drawRec() {
-        ctx.beginPath()
-        ctx.fillStyle = fadeColor(this.percent)
-        ctx.fillRect(this.x, this.y, this.height, this.width)
-        ctx.fill()
-    }
-
-    //Fades the box to a different color
-    fade() {
-        var percentage_fade = 0
-        requestAnimationFrame(this.fade.bind(this))
-        //this.drawRec().bind(this)
-        percentage_fade += .01
-    }
-
-    startFade(){
-        if(!this.animating){
-            this.animating = true
-            this.fade()
-            this.drawRec()
+        if(this.pressed){
+            ctx.beginPath()
+            ctx.fillStyle = fadeColor(this.percent)
+            ctx.fillRect(this.x, this.y, this.height, this.width)
+        } else {
+            ctx.beginPath()
+            ctx.fillStyle = this.normal_color
+            ctx.fillRect(this.x, this.y, this.height, this.width)
         }
-        this.animating = false
+        if(this.percent <= 99){
+            this.percent += 2
+        } else {
+            this.pressed = false
+        }
+    }
+
+    //Starts the animation which fades the color back to red from blue
+    click(){
+        this.percent = 0
+        this.pressed = true
     }
 }
 
 //Buffer Spaces
-var xbuff = 60
+var xbuff = 10
 var ybuff = 100
 
 //Variables surrounding the creation of rectangles
@@ -109,15 +105,36 @@ window.addEventListener('keyup', keyup, false)
 
 //Update the state of the world for the elapsed time since last render
 function update(progress){
-    //Detects 
+    //Detects keypresses
     if(state.pressedKeys.one){
-        rect_array[0].startFade()
-        rect_array[0].drawRec()
+        rect_array[0].click()
     }
-
     if(state.pressedKeys.two){
-        rect_array[1].startFade()
-        rect_array[1].drawRec()
+        rect_array[1].click()
+    }
+    if(state.pressedKeys.three){
+        rect_array[2].click()
+    }
+    if(state.pressedKeys.four){
+        rect_array[3].click()
+    }
+    if(state.pressedKeys.five){
+        rect_array[4].click()
+    }
+    if(state.pressedKeys.six){
+        rect_array[5].click()
+    }
+    if(state.pressedKeys.seven){
+        rect_array[6].click()
+    }
+    if(state.pressedKeys.eight){
+        rect_array[7].click()
+    }
+    if(state.pressedKeys.nine){
+        rect_array[8].click()
+    }
+    if(state.pressedKeys.zero){
+        rect_array[9].click()
     }
 
     //Set the canvas height and width to the size of the window
@@ -153,7 +170,7 @@ function draw_recs(x, y, a, b, num_rec){
     }
 }
 
-function redraw_stuffs(){
+function redraw_rectangles(){
     for(i = 0; i < rect_array.length; i++){
         rect_array[i].drawRec()
     }
@@ -162,11 +179,12 @@ function redraw_stuffs(){
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-    redraw_stuffs()
+    redraw_rectangles()
 }
 
 function init(){
     draw_recs(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_rectangles)
+    loop()
 }
 
 //Basic game loops
@@ -180,7 +198,6 @@ function loop(timestamp){
     window.requestAnimationFrame(loop)
 }
 
-init()
-
 var lastRender = 0
-window.requestAnimationFrame(loop)
+
+init()
