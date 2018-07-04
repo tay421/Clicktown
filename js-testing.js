@@ -49,6 +49,3 @@ rect_array[0].pressed = true
 for(i = 0; i < rect_array.length; i++){
     rect_array[i].drawRec()
 }
-
-ctx.fillStyle = 'blue'
-ctx.fillRect(200, 200, 100, 100)

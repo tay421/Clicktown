@@ -18,6 +18,13 @@ var state = {
     }
 }
 
+//Hard coded to make the squares always be red and blue, watch out!
+function fadeColor(fraction){
+    var percentage = fraction / 100
+    var reverse_percentage = 1 - percentage
+    return 'rgb(' + 255 * percentage + ', 0,' + 255 * reverse_percentage + ')'
+}
+
 //Rectangles for buttons at bottom of screen
 class Rectangle {
     constructor(x, y, rheight, rwidth, number, color = 'red'){
@@ -27,22 +34,36 @@ class Rectangle {
         this.x = x
         this.y = y
         this.number = number
-        this.color = color
         this.transitioning = false
-        this.pressed_color = 'blue'
         this.pressed = false
+        this.percent = 100
+        this.d = new Date()
+        this.t = this.d.getTime()
+        this.animating = false
     }
+    //Draws the rectangle on the canvas
     drawRec() {
-        if(this.pressed){
-            ctx.beginPath()
-            ctx.fillStyle = this.pressed_color
-            ctx.fillRect(this.x, this.y, this.height, this.width)
-            ctx.fill()
-        } else {
-            ctx.beginPath()
-            ctx.fillStyle = this.color
-            ctx.fillRect(this.x, this.y, this.height, this.width)
+        ctx.beginPath()
+        ctx.fillStyle = fadeColor(this.percent)
+        ctx.fillRect(this.x, this.y, this.height, this.width)
+        ctx.fill()
+    }
+
+    //Fades the box to a different color
+    fade() {
+        var percentage_fade = 0
+        requestAnimationFrame(this.fade.bind(this))
+        //this.drawRec().bind(this)
+        percentage_fade += .01
+    }
+
+    startFade(){
+        if(!this.animating){
+            this.animating = true
+            this.fade()
+            this.drawRec()
         }
+        this.animating = false
     }
 }
 
@@ -54,8 +75,6 @@ var ybuff = 100
 var amount_of_rectangles = 10
 var x_change = (window.innerWidth - xbuff) / 10
 var rect_array = []
-var first_pass = true
-var redraw = false
 
 
 //Basic keymap of all top keyboard numbers
@@ -88,19 +107,16 @@ function keyup(event){
 window.addEventListener('keydown', keydown, false)
 window.addEventListener('keyup', keyup, false)
 
-
-
 //Update the state of the world for the elapsed time since last render
-//TODO: Fix this so that only one rectangle actually changes color
 function update(progress){
-    
+    //Detects 
     if(state.pressedKeys.one){
-        rect_array[0].pressed = true
+        rect_array[0].startFade()
         rect_array[0].drawRec()
     }
 
     if(state.pressedKeys.two){
-        rect_array[1].pressed = true
+        rect_array[1].startFade()
         rect_array[1].drawRec()
     }
 
