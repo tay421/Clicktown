@@ -39,7 +39,7 @@ class Ability {
         this.number = number
         this.transitioning = false
         this.pressed = false
-        this.normal_color = 'red'
+        this.normal_color = color
         this.damage = 10
     }
     //Draws the ability on the canvas
@@ -48,34 +48,63 @@ class Ability {
             ctx.beginPath()
             ctx.fillStyle = fadeColor(this.percent)
             ctx.fillRect(this.x, this.y, this.height, this.width)
+            this.damage = 0
         } else {
             ctx.beginPath()
             ctx.fillStyle = this.normal_color
             ctx.fillRect(this.x, this.y, this.height, this.width)
+            this.damage = 10
         }
         if(this.percent <= 99){
             this.percent += 2
-        } else {
+        }
+        if(!state.pressedKeys['one'] && this.percent > 99){
             this.pressed = false
         }
     }
 
     //Starts the animation which fades the color back to red from blue
-    click(){
-        this.percent = 0
-        this.pressed = true
+    click(key){
+        if(!this.pressed){
+            this.percent = 0
+            this.pressed = true
+            this.key = key
+        }
     }
 }
 
 class Grunt{
-    constructor(level){
-        this.health = Math.floor((Math.random * 100)+1)
+    constructor(x, y, rheight, rwidth, level){
+        this.x = x
+        this.y = y
+        this.height = rheight
+        this.width = rwidth
+        this.level = level
+        this.health = 100
+        this.normal_color = 'red'
+        this.dead = false
+        this.damaged = false
     }
-    get health(){
+    drawGrunt(){
+        if(!this.damaged){
+            ctx.beginPath()
+            ctx.fillStyle = this.normal_color
+            ctx.fillRect(this.x, this.y, this.height, this.width)
+        } else {
+            ctx.beginPath()
+            ctx.fillStyle = 'green'
+            ctx.fillRect(this.x, this.y, this.height, this.width)
+        }
+    }
+    getHealth(){
         return this.health
     }
-    set health(damage){
+    dmgGrunt(damage){
         this.health -= damage
+        console.log(this.health)
+        if(this.health <= 0){
+            this.damaged = true
+        }
     }
 }
 
@@ -87,6 +116,7 @@ var ybuff = 100
 var amount_of_abilities = 10
 var x_change = (window.innerWidth - xbuff) / 10
 var abl_array = []
+var enemy_array = []
 
 
 //Basic keymap of all top keyboard numbers
@@ -123,13 +153,14 @@ window.addEventListener('keyup', keyup, false)
 function update(progress){
     //Detects keypresses
     if(state.pressedKeys.one){
-        abl_array[0].click()
+        abl_array[0].click('one')
+        enemy_array[0].dmgGrunt(abl_array[0].damage)
     }
     if(state.pressedKeys.two){
-        abl_array[1].click()
+        abl_array[1].click('two')
     }
     if(state.pressedKeys.three){
-        abl_array[2].click()
+        abl_array[2].click('three')
     }
     if(state.pressedKeys.four){
         abl_array[3].click()
@@ -178,6 +209,8 @@ var ctx = canvas.getContext("2d")
 ctx.fillStyle = 'red'
 
 //Creates num_abl number of ability classes and stores them in abl_array
+//If first pass true, uses variables
+//Else does not use variables
 function draw_abls(x, y, a, b, num_abl){
     if(first_pass){
         for(i = 0; i < num_abl; i++){
@@ -193,20 +226,31 @@ function draw_abls(x, y, a, b, num_abl){
 }
 
 //Draws enemy(ies) on canvas
-function draw_enemies(){
-
+function draw_enemies(x, y, a, b, num_enemies){
+    if(first_pass){
+        for(i = 0; i < num_enemies; i++){
+            let grnt = new Grunt(x, y, a, b, 1)
+            grnt.drawGrunt()
+            enemy_array.push(grnt)
+        }
+    } else {
+        for(i = 0; i < enemy_array.length; i++){
+            enemy_array[i].drawGrunt()
+        }
+    }
 }
 
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
     draw_abls()
+    draw_enemies()
 }
 
 function init(){
     //Draws important stuff on screen
     draw_abls(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_abilities)
-    draw_enemies()
+    draw_enemies(canvas.width / 2, canvas.height / 3, 50, 50, 1)
 
     //All first pass logic should be above this variable
     first_pass = false
