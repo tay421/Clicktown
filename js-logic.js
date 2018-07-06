@@ -1,6 +1,13 @@
-//TODO:
 /*
-    -Implement abilities
+**   TODO:
+**  -Add more abilities
+**  -Implement incremental system
+**  -Make 'Buttons', decide what they do with a javascript object like pressed keys
+**  -Be able to change systems with the click of a button (Incremental to DPS)
+**  -Visuals?
+**  -Fix bug where when holding down key, time keeps going into negatives
+**  -
+**
 */
 
 //Width and height of window
@@ -9,6 +16,8 @@ var height = window.innerHeight
 
 //First pass, used in some of the ability and enemy functions
 var first_pass = true
+var clicker_mode = true
+var dps_mode = false
 
 //Tracks if keys are pressed or not
 var state = {
@@ -26,11 +35,40 @@ var state = {
     }
 }
 
+//Abilities
+
+var abilities = {
+    names: {
+        zero: '',
+        one: 'frostbolt',
+        two: 'fireball',
+        three: 'ice lance',
+        four: '',
+        five: '',
+        six: '',
+        seven: '',
+        eight: '',
+        nine: ''
+    },
+    critical_hit: {
+        zero: false,
+        one: false,
+        two: false,
+        three: false,
+        four: false,
+        five: false,
+        six: false,
+        seven: false,
+        eight: false,
+        nine: false
+    }
+}
+
 //Hard coded to make the squares always be red and blue, watch out!
 function fadeColor(fraction){
     var percentage = fraction / 100
     var reverse_percentage = 1 - percentage
-    return 'rgb(' + 255 * percentage + ', 0,' + 255 * reverse_percentage + ')'
+    return 'rgb(' + (255 * percentage) + ',' + (reverse_percentage * 157) + ',' + (255 * reverse_percentage) + ')'
 }
 
 function numberToName(number){
@@ -70,56 +108,104 @@ function numberToName(number){
 
 //Abilites for buttons at bottom of screen
 class Ability {
-    constructor(x, y, rwidth, rheight, number, color = 'red'){
+    constructor(x, y, rwidth, rheight, number, name, color = 'red'){
         this.height = rheight
         this.width = rwidth
         this.x = x
         this.y = y
         this.number = number
+        if(this.number == 10){
+            this.number = 0
+        }
+        this.getThisKey()
         this.transitioning = false
         this.pressed = false
         this.normal_color = color
         this.damage = 10
-        this.normalDamage = 10
-        this.cooldown = .5
+        this.cooldown = 1
         this.last_clicked = Date.now()
         this.fade_percent = (Date.now() - this.last_clicked) / 10
+        this.name = name
+        this.crit_chance = .1
+        this.getStats()
+        this.normal_damage = this.damage
     }
     //Draws the ability on the canvas
     drawAbl() {
-        this.getThisKey()
         this.fade_percent = (Date.now() - this.last_clicked) / (10 * this.cooldown)
-        if(!state.pressedKeys['one'] && (Date.now() - this.last_clicked > this.cooldown * 1000)){
+        if(!state.pressedKeys[this.number] && (Date.now() - this.last_clicked > this.cooldown * 1000)){
             this.pressed = false
         }
         if(this.pressed){
             ctx.beginPath()
             ctx.fillStyle = fadeColor(this.fade_percent)
-            console.log(this.fade_percent)
             ctx.fillRect(this.x, this.y, this.height, this.width)
             this.damage = 0
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillText(this.name, this.x, this.y - 10, this.width)
+            ctx.beginPath()
+            ctx.fillStyle = 'black'
+            ctx.font = "20px Arial"
+            ctx.fillText((Math.round(((((this.fade_percent/100) * this.cooldown) - this.cooldown)*-1)*10)/10).toFixed(1), this.x, this.y + 20)
         } else {
             ctx.beginPath()
             ctx.fillStyle = this.normal_color
             ctx.fillRect(this.x, this.y, this.height, this.width)
-            this.damage = 10
-        }
-        if(this.percent <= 99){
-            this.percent += this.cooldown
+            this.damage = this.normal_damage
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillText(this.name, this.x, this.y - 10, this.width)
+            abilities.critical_hit[this.number] = false
+            if(this.ability_just_used){
+                this.damage /= 2
+                this.cooldown += 1
+                this.ability_just_used = false
+            }
         }
     }
 
     //Starts the animation which fades the color back to red from blue
-    click(){
+    use(){
         if(!this.pressed){
             this.pressed = true
+            this.abilityUsedAfterCrit()
             this.percent = 0
             this.last_clicked = Date.now()
+            if(Math.random() < this.crit_chance){
+                this.damage *= 2
+                abilities.critical_hit[this.number] = true
+            }
         }
     }
 
     getThisKey(){
         this.number = numberToName(this.number)
+    }
+
+    //Get stats for ability
+    getStats(){
+        switch (this.name){
+            case 'frostbolt':
+                this.damage = 10
+                this.crit_chance = 1
+                this.cooldown = 1.3
+                break;
+            case 'fireball':
+                this.damage = 30
+                this.crit_chance = 1
+                this.cooldown = 6
+                break;
+
+        }
+    }
+
+    abilityUsedAfterCrit(){
+        if(abilities.critical_hit['one'] && !this.ability_just_used){
+            this.damage *= 2
+            this.cooldown -= 1
+            this.ability_just_used = true
+        }
     }
 }
 
@@ -130,10 +216,13 @@ class Grunt{
         this.height = rheight
         this.width = rwidth
         this.level = level
-        this.health = 100
+        this.health = 1000
         this.normal_color = 'red'
         this.dead = false
         this.damaged = false
+        this.origHealth = this.health
+        this.frozen = false
+        this.damage_log = []
     }
 
     //Draws 'Grunt' on canvas
@@ -145,7 +234,7 @@ class Grunt{
             this.drawHealthBar()
             ctx.beginPath()
             ctx.font = "30px Arial"
-            ctx.fillText(this.health, this.x, this.y - 50)
+            ctx.fillText(this.health, this.x, this.y - 50, this.width)
         } else {
             ctx.beginPath()
             ctx.fillStyle = 'green'
@@ -166,12 +255,15 @@ class Grunt{
         this.health -= damage
         if(this.health <= 0){
             this.dead = true
+        } else if (damage != 0) {
+            this.damage_log.push(damage)
+            console.log(this.damage_log)
         }
     }
 
     //Health bar drawer
     drawHealthBar(){
-        var barLength = this.width * (this.health / 100)
+        var barLength = this.width * (this.health/this.origHealth)
         if(this.health >= 0){
             ctx.beginPath()
             ctx.fillStyle = this.normal_color
@@ -186,6 +278,7 @@ var ybuff = 100
 
 //Variables surrounding the creation of abilities
 var amount_of_abilities = 10
+var amount_of_enemies = 1
 var x_change = (window.innerWidth - xbuff) / 10
 var abl_array = []
 var enemy_array = []
@@ -225,35 +318,36 @@ window.addEventListener('keyup', keyup, false)
 function update(progress){
     //Detects keypresses
     if(state.pressedKeys.one){
-        abl_array[0].click()
+        abl_array[0].use()
         enemy_array[0].dmgGrunt(abl_array[0].damage)
     }
     if(state.pressedKeys.two){
-        abl_array[1].click()
+        abl_array[1].use()
+        enemy_array[0].dmgGrunt(abl_array[1].damage)
     }
     if(state.pressedKeys.three){
-        abl_array[2].click()
+        abl_array[2].use()
     }
     if(state.pressedKeys.four){
-        abl_array[3].click()
+        abl_array[3].use()
     }
     if(state.pressedKeys.five){
-        abl_array[4].click()
+        abl_array[4].use()
     }
     if(state.pressedKeys.six){
-        abl_array[5].click()
+        abl_array[5].use()
     }
     if(state.pressedKeys.seven){
-        abl_array[6].click()
+        abl_array[6].use()
     }
     if(state.pressedKeys.eight){
-        abl_array[7].click()
+        abl_array[7].use()
     }
     if(state.pressedKeys.nine){
-        abl_array[8].click()
+        abl_array[8].use()
     }
     if(state.pressedKeys.zero){
-        abl_array[9].click()
+        abl_array[9].use()
     }
 
     //Set the canvas height and width to the size of the window
@@ -286,7 +380,7 @@ ctx.fillStyle = 'red'
 function draw_abls(x, y, a, b, num_abl){
     if(first_pass){
         for(i = 0; i < num_abl; i++){
-            let r = new Ability(x + (x_change * i), y, a, b, i)
+            let r = new Ability(x + (x_change * i), y, a, b, i + 1, abilities.names[numberToName(i + 1)])
             r.drawAbl()
             abl_array.push(r)
         }
@@ -322,7 +416,7 @@ function draw(){
 function init(){
     //Draws important stuff on screen
     draw_abls(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_abilities)
-    draw_enemies((canvas.width / 2), canvas.height / 3, 50, 50, 1)
+    draw_enemies((canvas.width / 2), canvas.height / 3, 50, 50, amount_of_enemies)
 
     //All first pass logic should be above this variable
     first_pass = false
