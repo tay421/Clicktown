@@ -1,3 +1,8 @@
+//TODO:
+/*
+    -Implement abilities
+*/
+
 //Width and height of window
 var width = window.innerWidth
 var height = window.innerHeight
@@ -76,14 +81,21 @@ class Ability {
         this.normal_color = color
         this.damage = 10
         this.normalDamage = 10
-        this.cooldown = 3
+        this.cooldown = .5
+        this.last_clicked = Date.now()
+        this.fade_percent = (Date.now() - this.last_clicked) / 10
     }
     //Draws the ability on the canvas
     drawAbl() {
         this.getThisKey()
+        this.fade_percent = (Date.now() - this.last_clicked) / (10 * this.cooldown)
+        if(!state.pressedKeys['one'] && (Date.now() - this.last_clicked > this.cooldown * 1000)){
+            this.pressed = false
+        }
         if(this.pressed){
             ctx.beginPath()
-            ctx.fillStyle = fadeColor(this.percent)
+            ctx.fillStyle = fadeColor(this.fade_percent)
+            console.log(this.fade_percent)
             ctx.fillRect(this.x, this.y, this.height, this.width)
             this.damage = 0
         } else {
@@ -95,16 +107,14 @@ class Ability {
         if(this.percent <= 99){
             this.percent += this.cooldown
         }
-        if(!state.pressedKeys['one'] && this.percent > 99){
-            this.pressed = false
-        }
     }
 
     //Starts the animation which fades the color back to red from blue
     click(){
         if(!this.pressed){
-            this.percent = 0
             this.pressed = true
+            this.percent = 0
+            this.last_clicked = Date.now()
         }
     }
 
@@ -219,10 +229,10 @@ function update(progress){
         enemy_array[0].dmgGrunt(abl_array[0].damage)
     }
     if(state.pressedKeys.two){
-        abl_array[1].click('two')
+        abl_array[1].click()
     }
     if(state.pressedKeys.three){
-        abl_array[2].click('three')
+        abl_array[2].click()
     }
     if(state.pressedKeys.four){
         abl_array[3].click()
