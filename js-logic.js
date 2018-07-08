@@ -276,8 +276,28 @@ class Grunt{
 }
 
 //Switch to change from clicker to dps mode
-class Switch(){
+class Switch{
+    constuctor(){
+        this.pressed = false
+        this.x = window.innerWidth - 50
+        this.y = 0
+        this.width = 50
+        this.height = 50
+    }
     
+    change(){
+        clicker_mode = !clicker_mode
+        dps_mode = !dps_mode
+    }
+
+    draw(){
+        ctx.fillStyle = 'red'
+        ctx.fillRect(this.x, this.y, this.width, this.height)
+    }
+
+    checkIfPressed(){
+
+    }
 }
 
 //Buffer Spaces
@@ -417,6 +437,7 @@ function draw_enemies(x, y, a, b, num_enemies){
 function draw_switch(){
     if(first_pass){
         switch1 = new Switch()
+        switch1.draw()
     }
 }
 
@@ -426,8 +447,8 @@ function draw(){
     if(dps_mode){
         draw_abls()
         draw_enemies()
-    } else if (clicker_mode){
-
+    } else {
+        draw_switch()
     }
 }
 
