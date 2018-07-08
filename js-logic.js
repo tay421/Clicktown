@@ -41,8 +41,8 @@ var abilities = {
     names: {
         zero: '',
         one: 'frostbolt',
-        two: 'fireball',
-        three: 'ice lance',
+        two: 'ice lance',
+        three: 'fireball',
         four: '',
         five: '',
         six: '',
@@ -122,7 +122,7 @@ class Ability {
         this.pressed = false
         this.normal_color = color
         this.damage = 10
-        this.cooldown = 1
+        this.cooldown = 2
         this.last_clicked = Date.now()
         this.fade_percent = (Date.now() - this.last_clicked) / 10
         this.name = name
@@ -133,6 +133,7 @@ class Ability {
     //Draws the ability on the canvas
     drawAbl() {
         this.fade_percent = (Date.now() - this.last_clicked) / (10 * this.cooldown)
+        
         if(!state.pressedKeys[this.number] && (Date.now() - this.last_clicked > this.cooldown * 1000)){
             this.pressed = false
         }
@@ -147,7 +148,9 @@ class Ability {
             ctx.beginPath()
             ctx.fillStyle = 'black'
             ctx.font = "20px Arial"
-            ctx.fillText((Math.round(((((this.fade_percent/100) * this.cooldown) - this.cooldown)*-1)*10)/10).toFixed(1), this.x, this.y + 20)
+            if(this.fade_percent <= 99){
+                ctx.fillText((Math.round(((((this.fade_percent/100) * this.cooldown) - this.cooldown)*-1)*10)/10).toFixed(1), this.x, this.y + 20)
+            }
         } else {
             ctx.beginPath()
             ctx.fillStyle = this.normal_color
@@ -191,7 +194,7 @@ class Ability {
                 this.crit_chance = 1
                 this.cooldown = 1.3
                 break;
-            case 'fireball':
+            case 'ice lance':
                 this.damage = 30
                 this.crit_chance = 1
                 this.cooldown = 6
@@ -270,6 +273,11 @@ class Grunt{
             ctx.fillRect(this.x, this.y + this.height + 10, barLength, (this.height / 5))
         }
     }
+}
+
+//Switch to change from clicker to dps mode
+class Switch(){
+    
 }
 
 //Buffer Spaces
@@ -406,11 +414,21 @@ function draw_enemies(x, y, a, b, num_enemies){
     }
 }
 
+function draw_switch(){
+    if(first_pass){
+        switch1 = new Switch()
+    }
+}
+
 //Draw the state of the world
 function draw(){
     ctx.clearRect(0,0,width,height)
-    draw_abls()
-    draw_enemies()
+    if(dps_mode){
+        draw_abls()
+        draw_enemies()
+    } else if (clicker_mode){
+
+    }
 }
 
 function init(){
