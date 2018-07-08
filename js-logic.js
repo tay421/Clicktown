@@ -18,6 +18,11 @@ var height = window.innerHeight
 var first_pass = true
 var clicker_mode = true
 var dps_mode = false
+var click_value = 1
+var num_upgrades = 3
+var total_clicks = 0
+var clicks = 0
+
 
 //Tracks if keys are pressed or not
 var state = {
@@ -32,6 +37,11 @@ var state = {
         seven: false,
         eight: false,
         nine: false
+    },
+    pressedMouse: {
+        zero: false,
+        one: false,
+        two: false
     }
 }
 
@@ -61,6 +71,29 @@ var abilities = {
         seven: false,
         eight: false,
         nine: false
+    }
+}
+
+var upgrades = {
+    names: {
+        0: 'mouse',
+        1: 'orc',
+        2: 'hammond'
+    },
+    cost: {
+        0: 50,
+        1: 150,
+        2: 500
+    },
+    show_value:{
+        0: 10,
+        1: 50,
+        2: 100
+    },
+    click_value: {
+        0: 1,
+        1: 10,
+        2: 100
     }
 }
 
@@ -260,7 +293,6 @@ class Grunt{
             this.dead = true
         } else if (damage != 0) {
             this.damage_log.push(damage)
-            console.log(this.damage_log)
         }
     }
 
@@ -276,27 +308,153 @@ class Grunt{
 }
 
 //Switch to change from clicker to dps mode
-class Switch{
-    constuctor(){
+class Switcher{
+    constructor(x1, y1, width, height){
         this.pressed = false
-        this.x = window.innerWidth - 50
-        this.y = 0
-        this.width = 50
-        this.height = 50
+        this.xPos = x1
+        this.yPos = y1
+        this.width = width
+        this.height = height
+        if(clicker_mode){
+            this.text = 'DPS Mode'
+        } else {
+            this.text = 'Clicker Mode'
+        }
     }
     
     change(){
         clicker_mode = !clicker_mode
         dps_mode = !dps_mode
+        if(clicker_mode){
+            this.text = 'DPS Mode'
+        } else {
+            this.text = 'Clicker Mode'
+        }
     }
 
     draw(){
+        ctx.beginPath()
         ctx.fillStyle = 'red'
-        ctx.fillRect(this.x, this.y, this.width, this.height)
+        ctx.fillRect(this.xPos, this.yPos, this.width, this.height)
+        ctx.beginPath()
+        ctx.font = "20px Arial"
+        ctx.fillStyle = 'blue'
+        ctx.fillText(this.text, this.xPos, this.yPos + 20, this.width)
     }
 
-    checkIfPressed(){
+    press(){
+        if(!this.pressed && this.mouseOver() && !state.pressedMouse['zero']){
+            this.pressed = true
+            this.change()
+        }
+        if(state.pressedMouse['zero']){
+            this.pressed = false
+        }
+    }
 
+    mouseOver(){
+        if((mouseXPosition >= this.xPos && mouseXPosition <= this.xPos + this.width) && (mouseYPosition >= this.yPos && mouseYPosition < this.yPos + this.height)){
+            return true
+        }
+        return false
+    }
+}
+
+class Clicker{
+    constructor(){
+        this.width = 150
+        this.height = 150
+        this.x = (window.innerWidth - 300) / 2
+        this.y = (window.innerHeight - 300) / 2
+        this.text = 'Click Me'
+        this.pressed = false
+    }
+
+    draw(){
+        ctx.beginPath()
+        ctx.fillStyle = 'red'
+        ctx.fillRect(this.x, this.y, this.width, this.height)
+        ctx.beginPath()
+        ctx.font = "38px Arial"
+        ctx.fillStyle = 'blue'
+        ctx.fillText('Click Me', this.x, this.y + 80)
+        ctx.beginPath()
+        ctx.font = "38px Arial"
+        ctx.fillStyle = 'blue'
+        ctx.fillText('Clicks: ' + clicks, this.x, this.y - 80)
+    }
+
+    press(){
+        if(!this.pressed && this.mouseOver() && !state.pressedMouse['zero']){
+            this.pressed = true
+            clicks += click_value
+            total_clicks += click_value
+        }
+        if(state.pressedMouse['zero']){
+            this.pressed = false
+        }
+    }
+
+    mouseOver(){
+        if((mouseXPosition >= this.x && mouseXPosition <= this.x + this.width) && (mouseYPosition >= this.y && mouseYPosition < this.y + this.height)){
+            return true
+        }
+        return false
+    }
+}
+
+class ClickerUpgrade{
+    constructor(x, y, number){
+        this.x = x
+        this.y = y
+        this.shown = false
+        this.number = number
+        this.width = 100
+        this.height = 30
+        this.purchased = 0
+        this.last_added_to_clicks = Date.now()
+        this.pressed = false
+    }
+
+    show(){
+        if(!this.shown && total_clicks >= upgrades.show_value[this.number]){
+            this.shown = true
+        }
+    }
+
+    draw(){
+        if(this.shown){
+            ctx.beginPath()
+            ctx.fillStyle = 'red'
+            ctx.fillRect(this.x, this.y, this.width, this.height)
+            ctx.beginPath()
+            ctx.fillStyle = 'blue'
+            ctx.font = '20px Arial'
+            ctx.fillText(upgrades.names[this.number] + ": " + upgrades.cost[this.number] + "    x" + this.purchased, this.x, this.y + 20, 100)
+            if(Date.now() - this.last_added_to_clicks > 1000 && this.purchased > 0){
+                this.last_added_to_clicks = Date.now()
+                clicks += upgrades.click_value[this.number] * this.purchased
+            }
+        }
+        this.show()
+    }
+
+    press(){
+        if(!this.pressed && this.mouseOver() && !state.pressedMouse['zero'] && this.shown && clicks >= upgrades.cost[this.number]){
+            this.pressed = true
+            this.purchased += 1
+            clicks -= upgrades.cost[this.number]
+        }
+        if(state.pressedMouse['zero']){
+            this.pressed = false
+        }
+    }
+
+    mouseOver(){
+        if((mouseXPosition >= this.x && mouseXPosition <= this.x + this.width) && (mouseYPosition >= this.y && mouseYPosition < this.y + this.height)){
+            return true
+        }
+        return false
     }
 }
 
@@ -310,6 +468,9 @@ var amount_of_enemies = 1
 var x_change = (window.innerWidth - xbuff) / 10
 var abl_array = []
 var enemy_array = []
+var switch_array = []
+var clicker_array = []
+var upgrade_array = []
 
 
 //Basic keymap of all top keyboard numbers
@@ -338,44 +499,74 @@ function keyup(event){
     state.pressedKeys[key] = false
 }
 
+var mouseXPosition = 0
+var mouseYPosition = 0
+
+function onDown(event) {
+    if(event.button == 0){
+        state.pressedMouse['zero']= true
+        mouseXPosition = event.clientX
+        mouseYPosition = event.clientY
+    }
+}
+
+function onUp(event){
+    if(event.button == 0){
+        state.pressedMouse['zero']= false
+    }
+}
+
 //Adds event listener to detect key presses
 window.addEventListener('keydown', keydown, false)
 window.addEventListener('keyup', keyup, false)
+window.addEventListener('mousedown', onDown, false)
+window.addEventListener('mouseup', onUp, false)
 
 //Update the state of the world for the elapsed time since last render
 function update(progress){
     //Detects keypresses
-    if(state.pressedKeys.one){
-        abl_array[0].use()
-        enemy_array[0].dmgGrunt(abl_array[0].damage)
+    if(dps_mode){
+        if(state.pressedKeys.one){
+            abl_array[0].use()
+            enemy_array[0].dmgGrunt(abl_array[0].damage)
+        }
+        if(state.pressedKeys.two){
+            abl_array[1].use()
+            enemy_array[0].dmgGrunt(abl_array[1].damage)
+        }
+        if(state.pressedKeys.three){
+            abl_array[2].use()
+        }
+        if(state.pressedKeys.four){
+            abl_array[3].use()
+        }
+        if(state.pressedKeys.five){
+            abl_array[4].use()
+        }
+        if(state.pressedKeys.six){
+            abl_array[5].use()
+        }
+        if(state.pressedKeys.seven){
+            abl_array[6].use()
+        }
+        if(state.pressedKeys.eight){
+            abl_array[7].use()
+        }
+        if(state.pressedKeys.nine){
+            abl_array[8].use()
+        }
+        if(state.pressedKeys.zero){
+            abl_array[9].use()
+        }
     }
-    if(state.pressedKeys.two){
-        abl_array[1].use()
-        enemy_array[0].dmgGrunt(abl_array[1].damage)
-    }
-    if(state.pressedKeys.three){
-        abl_array[2].use()
-    }
-    if(state.pressedKeys.four){
-        abl_array[3].use()
-    }
-    if(state.pressedKeys.five){
-        abl_array[4].use()
-    }
-    if(state.pressedKeys.six){
-        abl_array[5].use()
-    }
-    if(state.pressedKeys.seven){
-        abl_array[6].use()
-    }
-    if(state.pressedKeys.eight){
-        abl_array[7].use()
-    }
-    if(state.pressedKeys.nine){
-        abl_array[8].use()
-    }
-    if(state.pressedKeys.zero){
-        abl_array[9].use()
+
+    //Detects mouse press
+    if(state.pressedMouse.zero){
+        switch_array[0].press()
+        clicker_array[0].press()
+        for(i = 0; i < upgrade_array.length; i++){
+            upgrade_array[i].press()
+        }
     }
 
     //Set the canvas height and width to the size of the window
@@ -386,6 +577,13 @@ function update(progress){
     if(canvas.width != window.innerWidth || width != canvas.width){
         canvas.width = window.innerWidth
         width = canvas.width 
+    }
+
+    
+    switch_array[0].press()
+    clicker_array[0].press()
+    for(i = 0; i < upgrade_array.length; i++){
+        upgrade_array[i].press()
     }
 }
 
@@ -436,8 +634,35 @@ function draw_enemies(x, y, a, b, num_enemies){
 
 function draw_switch(){
     if(first_pass){
-        switch1 = new Switch()
+        let switch1 = new Switcher(canvas.width - 100, 20, 50, 50)
+        switch_array.push(switch1)
         switch1.draw()
+    } else {
+        switch_array[0].draw()
+    }
+}
+
+function draw_clicker(){
+    if(first_pass){
+        let clicker1 = new Clicker()
+        clicker_array.push(clicker1)
+        clicker_array[0].draw()
+    } else {
+        clicker_array[0].draw()
+    }
+}
+
+function draw_upgrades(){
+    if(first_pass){
+        for(i = 0; i < num_upgrades; i++){
+            let upgrade = new ClickerUpgrade(10, 50 + (50 * i), i)
+            upgrade_array.push(upgrade)
+            upgrade_array[i].draw()
+        }
+    } else {
+        for(i = 0; i < upgrade_array.length; i++){
+            upgrade_array[i].draw()
+        }
     }
 }
 
@@ -448,14 +673,19 @@ function draw(){
         draw_abls()
         draw_enemies()
     } else {
-        draw_switch()
+        draw_clicker()
+        draw_upgrades()
     }
+    draw_switch()
 }
 
 function init(){
     //Draws important stuff on screen
     draw_abls(xbuff, window.innerHeight - ybuff, 50, 50, amount_of_abilities)
     draw_enemies((canvas.width / 2), canvas.height / 3, 50, 50, amount_of_enemies)
+    draw_switch()
+    draw_clicker()
+    draw_upgrades()
 
     //All first pass logic should be above this variable
     first_pass = false
