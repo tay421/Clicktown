@@ -1,14 +1,14 @@
 /*
 **   TODO:
 **  -Add more abilities
-**  -Implement incremental system
-**  -Make 'Buttons', decide what they do with a javascript object like pressed keys
-**  -Be able to change systems with the click of a button (Incremental to DPS)
 **  -Visuals?
-**  -Fix bug where when holding down key, time keeps going into negatives
-**  -
+**  -Opacity
 **
 */
+
+//Keeps the mouse position
+var mouseXPosition = 0
+var mouseYPosition = 0
 
 //Width and height of window
 var width = window.innerWidth
@@ -16,12 +16,54 @@ var height = window.innerHeight
 
 //First pass, used in some of the ability and enemy functions
 var first_pass = true
+
+//Variables to differentiate between clicker and dps modes of play
 var clicker_mode = true
 var dps_mode = false
+var dps_upgrades_menu = false
+
+//User values regarding clicker
 var click_value = 1
-var num_upgrades = 3
+var num_upgrades = 10
 var total_clicks = 0
 var clicks = 0
+
+//Setting up images
+var frame = new Image()
+frame.src = 'images/frame2.png'
+var click_button = new Image()
+click_button.src = 'images/button.png'
+var to_battlefield = new Image()
+to_battlefield.src = 'images/to_battlefield.png'
+
+//Buffer Spaces
+var xbuff = 30
+var ybuff = 100
+
+//Variables surrounding the creation of abilities
+var amount_of_abilities = 10
+var amount_of_enemies = 1
+var x_change = (window.innerWidth - xbuff) / 10
+var abl_array = []
+var enemy_array = []
+var switch_array = []
+var clicker_array = []
+var upgrade_array = []
+
+//Basic keymap of all top keyboard numbers
+var keyMap = {
+    48: 'zero',
+    49: 'one',
+    50: 'two',
+    51: 'three',
+    52: 'four',
+    53: 'five',
+    54: 'six',
+    55: 'seven',
+    56: 'eight',
+    57: 'nine'
+}
+
 
 
 //Tracks if keys are pressed or not
@@ -76,9 +118,10 @@ var abilities = {
 
 var upgrades = {
     names: {
-        0: 'mouse',
-        1: 'orc',
-        2: 'hammond'
+        0: 'Worker Mouse',
+        1: 'Twinkling Pixie',
+        2: 'Withering Click Wizard',
+
     },
     cost: {
         0: 50,
@@ -94,8 +137,26 @@ var upgrades = {
         0: 1,
         1: 10,
         2: 100
+    },
+    description: {
+        0: 'A little mouse who has the sole objective of giving you one click per second.',
+        1: 'A small being, drawn to you by your magical power (and your clicks)',
+        2: 'While a little past his prime, he can deliver an impressive amount of clicks'
     }
 }
+
+//Get HTML canvas object
+var canvas = document.getElementById("canvas")
+
+//Set variables for basic drawing to HTML window
+canvas.width = window.innerWidth
+canvas.height = window.innerHeight
+var width = canvas.width
+var height = canvas.height
+var ctx = canvas.getContext("2d")
+
+//Fills the abilities once with red
+ctx.fillStyle = 'red'
 
 //Hard coded to make the squares always be red and blue, watch out!
 function fadeColor(fraction){
@@ -163,9 +224,14 @@ class Ability {
         this.getStats()
         this.normal_damage = this.damage
     }
+
+    
+
     //Draws the ability on the canvas
     drawAbl() {
         this.fade_percent = (Date.now() - this.last_clicked) / (10 * this.cooldown)
+        ctx.drawImage(frame, this.x - 10, this.y - 10)
+        ctx.closePath()
         
         if(!state.pressedKeys[this.number] && (Date.now() - this.last_clicked > this.cooldown * 1000)){
             this.pressed = false
@@ -223,7 +289,7 @@ class Ability {
     getStats(){
         switch (this.name){
             case 'frostbolt':
-                this.damage = 10
+                this.damage = 1000
                 this.crit_chance = 1
                 this.cooldown = 1.3
                 break;
@@ -232,6 +298,9 @@ class Ability {
                 this.crit_chance = 1
                 this.cooldown = 6
                 break;
+            case 'fireball':
+                this.damage = 1000
+                break
 
         }
     }
@@ -247,18 +316,22 @@ class Ability {
 
 class Grunt{
     constructor(x, y, rwidth, rheight, level){
-        this.x = x
-        this.y = y
+        this.x = (width - rwidth) / 2
+        this.y = (height - rheight - 200) / 2
         this.height = rheight
         this.width = rwidth
         this.level = level
         this.health = 1000
-        this.normal_color = 'red'
+        this.normal_color = 'rgba(255, 0, 0, 1)'
         this.dead = false
         this.damaged = false
         this.origHealth = this.health
         this.frozen = false
         this.damage_log = []
+        this.time_of_death = 0
+        this.death_move_down_pixels = 50
+        this.death_time = 0
+        this.dying = false
     }
 
     //Draws 'Grunt' on canvas
@@ -271,13 +344,26 @@ class Grunt{
             ctx.beginPath()
             ctx.font = "30px Arial"
             ctx.fillText(this.health, this.x, this.y - 50, this.width)
-        } else {
+        } else if (!this.dying){
+            this.time_of_death = Date.now()
+            this.dying = true
             ctx.beginPath()
-            ctx.fillStyle = 'green'
+            ctx.fillStyle = 'rgb(0, 255, 0)'
             ctx.fillRect(this.x, this.y, this.height, this.width)
+        } else {
+            this.y += (50 * (Date.now() - this.time_of_death) / 30000)
+        }
+        if((Date.now() - this.time_of_death) / 3000 < 1){
+            this.opacity = 1 - (Date.now() - this.time_of_death) / 2000
             ctx.beginPath()
-            ctx.font = "20px Arial"
-            ctx.fillText('Deaded', this.x, this.y - 50, this.width)
+            ctx.fillStyle = 'rgba(0, 255, 0, ' + this.opacity + ')'
+            ctx.fillRect(this.x, this.y, this.height, this.width)
+        } else if (this.dying) {
+            this.dead = false
+            this.y = (height - this.height - 200) / 2
+            this.health = 1000
+            this.opacity = 1
+            this.dying = false
         }
     }
 
@@ -309,16 +395,16 @@ class Grunt{
 
 //Switch to change from clicker to dps mode
 class Switcher{
-    constructor(x1, y1, width, height){
+    constructor(x, y, width, height){
         this.pressed = false
-        this.xPos = x1
-        this.yPos = y1
-        this.width = width
-        this.height = height
+        this.x = x
+        this.y = y
+        this.width = 300
+        this.height = 20
         if(clicker_mode){
-            this.text = 'DPS Mode'
+            this.text = 'DPS'
         } else {
-            this.text = 'Clicker Mode'
+            this.text = 'Clicker'
         }
     }
     
@@ -326,20 +412,21 @@ class Switcher{
         clicker_mode = !clicker_mode
         dps_mode = !dps_mode
         if(clicker_mode){
-            this.text = 'DPS Mode'
+            this.text = 'DPS'
         } else {
-            this.text = 'Clicker Mode'
+            this.text = 'Clicker'
         }
     }
 
     draw(){
-        ctx.beginPath()
-        ctx.fillStyle = 'red'
-        ctx.fillRect(this.xPos, this.yPos, this.width, this.height)
-        ctx.beginPath()
-        ctx.font = "20px Arial"
-        ctx.fillStyle = 'blue'
-        ctx.fillText(this.text, this.xPos, this.yPos + 20, this.width)
+        // ctx.beginPath()
+        // ctx.fillStyle = 'red'
+        // ctx.fillRect(this.x, this.y, this.width, this.height)
+        // ctx.beginPath()
+        // ctx.font = "20px Arial"
+        // ctx.fillStyle = 'blue'
+        // ctx.fillText(this.text, this.x, this.y + 20, this.width)
+        ctx.drawImage(to_battlefield, this.x, this.y)
     }
 
     press(){
@@ -353,7 +440,7 @@ class Switcher{
     }
 
     mouseOver(){
-        if((mouseXPosition >= this.xPos && mouseXPosition <= this.xPos + this.width) && (mouseYPosition >= this.yPos && mouseYPosition < this.yPos + this.height)){
+        if((mouseXPosition >= this.x && mouseXPosition <= this.x + this.width) && (mouseYPosition >= this.y && mouseYPosition < this.y + this.height)){
             return true
         }
         return false
@@ -362,26 +449,31 @@ class Switcher{
 
 class Clicker{
     constructor(){
-        this.width = 150
-        this.height = 150
-        this.x = (window.innerWidth - 300) / 2
+        this.width = 300
+        this.height = 300
+        this.x = ((window.innerWidth - this.width) / 2)
         this.y = (window.innerHeight - 300) / 2
         this.text = 'Click Me'
         this.pressed = false
+        this.opacity = 0
+        this.time_constructed = Date.now()
     }
 
     draw(){
         ctx.beginPath()
-        ctx.fillStyle = 'red'
-        ctx.fillRect(this.x, this.y, this.width, this.height)
+        ctx.drawImage(click_button, this.x, this.y)
         ctx.beginPath()
         ctx.font = "38px Arial"
         ctx.fillStyle = 'blue'
-        ctx.fillText('Click Me', this.x, this.y + 80)
-        ctx.beginPath()
-        ctx.font = "38px Arial"
-        ctx.fillStyle = 'blue'
-        ctx.fillText('Clicks: ' + clicks, this.x, this.y - 80)
+        this.plus_val = 140
+        if(clicks >= 10){
+            this.plus_val = 130
+        } else if (clicks >= 100){
+            this.plus_val = 120
+        } else if (clicks >= 1000){
+            this.plus_val = 110
+        }
+        ctx.fillText(clicks, this.x + this.plus_val, this.y - 60)
     }
 
     press(){
@@ -409,15 +501,16 @@ class ClickerUpgrade{
         this.y = y
         this.shown = false
         this.number = number
-        this.width = 100
+        this.width = 300
         this.height = 30
         this.purchased = 0
         this.last_added_to_clicks = Date.now()
         this.pressed = false
+        this.opacity = 0
     }
 
     show(){
-        if(!this.shown && total_clicks >= upgrades.show_value[this.number]){
+        if(!this.shown && clicks >= upgrades.show_value[this.number]){
             this.shown = true
         }
     }
@@ -430,13 +523,17 @@ class ClickerUpgrade{
             ctx.beginPath()
             ctx.fillStyle = 'blue'
             ctx.font = '20px Arial'
-            ctx.fillText(upgrades.names[this.number] + ": " + upgrades.cost[this.number] + "    x" + this.purchased, this.x, this.y + 20, 100)
-            if(Date.now() - this.last_added_to_clicks > 1000 && this.purchased > 0){
-                this.last_added_to_clicks = Date.now()
-                clicks += upgrades.click_value[this.number] * this.purchased
-            }
+            ctx.fillText(upgrades.names[this.number] + ": " + upgrades.cost[this.number] + "              " + this.purchased * upgrades.click_value[this.number] + " clicks / second", this.x, this.y + 20, this.width)
+            this.addClicks()
         }
         this.show()
+    }
+
+    addClicks(){
+        if(Date.now() - this.last_added_to_clicks > 1000 && this.purchased > 0){
+            this.last_added_to_clicks = Date.now()
+            clicks += upgrades.click_value[this.number] * this.purchased
+        }
     }
 
     press(){
@@ -458,35 +555,6 @@ class ClickerUpgrade{
     }
 }
 
-//Buffer Spaces
-var xbuff = 0
-var ybuff = 100
-
-//Variables surrounding the creation of abilities
-var amount_of_abilities = 10
-var amount_of_enemies = 1
-var x_change = (window.innerWidth - xbuff) / 10
-var abl_array = []
-var enemy_array = []
-var switch_array = []
-var clicker_array = []
-var upgrade_array = []
-
-
-//Basic keymap of all top keyboard numbers
-var keyMap = {
-    48: 'zero',
-    49: 'one',
-    50: 'two',
-    51: 'three',
-    52: 'four',
-    53: 'five',
-    54: 'six',
-    55: 'seven',
-    56: 'eight',
-    57: 'nine'
-}
-
 //Detects keydown events
 function keydown(event){
     var key = keyMap[event.keyCode]
@@ -498,9 +566,6 @@ function keyup(event){
     var key = keyMap[event.keyCode]
     state.pressedKeys[key] = false
 }
-
-var mouseXPosition = 0
-var mouseYPosition = 0
 
 function onDown(event) {
     if(event.button == 0){
@@ -584,21 +649,10 @@ function update(progress){
     clicker_array[0].press()
     for(i = 0; i < upgrade_array.length; i++){
         upgrade_array[i].press()
+        upgrade_array[i].addClicks()
     }
+
 }
-
-//Get HTML canvas object
-var canvas = document.getElementById("canvas")
-
-//Set variables for basic drawing to HTML window
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight
-var width = canvas.width
-var height = canvas.height
-var ctx = canvas.getContext("2d")
-
-//Fills the abilities once with red
-ctx.fillStyle = 'red'
 
 //Creates num_abl number of ability classes and stores them in abl_array
 //If first pass true, uses variables
@@ -634,7 +688,7 @@ function draw_enemies(x, y, a, b, num_enemies){
 
 function draw_switch(){
     if(first_pass){
-        let switch1 = new Switcher(canvas.width - 100, 20, 50, 50)
+        let switch1 = new Switcher(canvas.width - 230, 20, 50, 50)
         switch_array.push(switch1)
         switch1.draw()
     } else {
@@ -668,7 +722,8 @@ function draw_upgrades(){
 
 //Draw the state of the world
 function draw(){
-    ctx.clearRect(0,0,width,height)
+    ctx.fillStyle = '#5f5f5f'
+    ctx.fillRect(0,0,width,height)
     if(dps_mode){
         draw_abls()
         draw_enemies()
