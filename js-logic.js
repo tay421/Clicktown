@@ -3,6 +3,7 @@
 **  -Add more abilities
 **  -Visuals?
 **  -Opacity
+**  -Critical hit shake and "CRIT!" message
 **
 */
 
@@ -49,6 +50,9 @@ var enemy_array = []
 var switch_array = []
 var clicker_array = []
 var upgrade_array = []
+
+//Variables surrounding critical hits
+var display_crit_text = false
 
 //Basic keymap of all top keyboard numbers
 var keyMap = {
@@ -274,10 +278,16 @@ class Ability {
             this.abilityUsedAfterCrit()
             this.percent = 0
             this.last_clicked = Date.now()
-            if(Math.random() < this.crit_chance){
-                this.damage *= 2
-                abilities.critical_hit[this.number] = true
-            }
+            this.checkCrit()
+        }
+    }
+
+    checkCrit(){
+        //Checks for critial hit
+        if(Math.random() < this.crit_chance){
+            this.damage *= 2
+            abilities.critical_hit[this.number] = true
+            display_crit_text = true
         }
     }
 
@@ -332,6 +342,8 @@ class Grunt{
         this.death_move_down_pixels = 50
         this.death_time = 0
         this.dying = false
+        this.removing_crit_text = false
+        this.critical_hit_opacity = 1
     }
 
     //Draws 'Grunt' on canvas
@@ -365,6 +377,7 @@ class Grunt{
             this.opacity = 1
             this.dying = false
         }
+        this.drawCritText()
     }
 
     //Health getter
@@ -389,6 +402,31 @@ class Grunt{
             ctx.beginPath()
             ctx.fillStyle = this.normal_color
             ctx.fillRect(this.x, this.y + this.height + 10, barLength, (this.height / 5))
+        }
+    }
+
+    drawCritText(){
+        if(display_crit_text){
+            display_crit_text = false
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillStyle = 'rgba(255, 197, 50, ' + this.critical_hit_opacity + ')'
+            ctx.fillText('Critical Hit!', this.x  - 25, 325)
+            this.removing_crit_text = true
+            this.time_started_to_remove_crit_text = Date.now()
+        } else if (this.removing_crit_text){
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillStyle = 'rgba(255, 197, 50, ' + this.critical_hit_opacity + ')'
+            ctx.fillText('Critical Hit!', 
+                this.x - 25, 
+                325 - 100*(Date.now() - this.time_started_to_remove_crit_text) / 1000)
+            this.critical_hit_opacity *= 1 - (Date.now() - this.time_started_to_remove_crit_text) / 2000
+            if((Date.now() - this.time_started_to_remove_crit_text) / 2000 >= 1){
+                this.removing_crit_text = false
+                this.time_started_to_remove_crit_text = 0
+                this.critical_hit_opacity = 1
+            }
         }
     }
 }
@@ -457,11 +495,31 @@ class Clicker{
         this.pressed = false
         this.opacity = 0
         this.time_constructed = Date.now()
+        this.down_scaled = false
+        this.time_clicked = 0
+        this.expanding = false
     }
 
     draw(){
         ctx.beginPath()
-        ctx.drawImage(click_button, this.x, this.y)
+        if(this.down_scaled){
+            this.down_scaled = false
+            ctx.drawImage(click_button, this.x + 25, this.y + 25, 250, 250)
+            this.expanding = true
+        } else if (this.expanding){
+            let time_change = (Date.now() - this.time_clicked) / 250
+            ctx.drawImage(click_button, 
+                (this.x + 25) - (25 * time_change), 
+                (this.y + 25) - (25 * time_change),
+                250 + (50 * time_change),
+                250 + (50 * time_change)
+                )
+            if(time_change >= 1){
+                this.expanding = false
+            }
+        } else {
+            ctx.drawImage(click_button, this.x, this.y)
+        }
         ctx.beginPath()
         ctx.font = "38px Arial"
         ctx.fillStyle = 'blue'
@@ -481,6 +539,8 @@ class Clicker{
             this.pressed = true
             clicks += click_value
             total_clicks += click_value
+            this.down_scaled = true
+            this.time_clicked = Date.now()
         }
         if(state.pressedMouse['zero']){
             this.pressed = false
