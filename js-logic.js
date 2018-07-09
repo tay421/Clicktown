@@ -1,15 +1,17 @@
 /*
 **   TODO:
-**  -Add more abilities
-**  -Visuals?
-**  -Opacity
-**  -Critical hit shake and "CRIT!" message
+**  -Add more abilities/classes
+**  -Critical hit shake
+**  -Tooltips
+**  -Store
 **
 */
 
 //Keeps the mouse position
 var mouseXPosition = 0
 var mouseYPosition = 0
+var mouse_move_x_position = 0
+var mouse_move_y_position = 0
 
 //Width and height of window
 var width = window.innerWidth
@@ -22,6 +24,7 @@ var first_pass = true
 var clicker_mode = true
 var dps_mode = false
 var dps_upgrades_menu = false
+var store_mode = false
 
 //User values regarding clicker
 var click_value = 1
@@ -36,6 +39,10 @@ var click_button = new Image()
 click_button.src = 'images/button.png'
 var to_battlefield = new Image()
 to_battlefield.src = 'images/to_battlefield.png'
+var to_odd_stone = new Image()
+to_odd_stone.src = 'images/to_odd_stone.png'
+var to_store = new Image()
+to_store.src = 'images/to_store.png'
 
 //Buffer Spaces
 var xbuff = 30
@@ -50,9 +57,6 @@ var enemy_array = []
 var switch_array = []
 var clicker_array = []
 var upgrade_array = []
-
-//Variables surrounding critical hits
-var display_crit_text = false
 
 //Basic keymap of all top keyboard numbers
 var keyMap = {
@@ -141,11 +145,6 @@ var upgrades = {
         0: 1,
         1: 10,
         2: 100
-    },
-    description: {
-        0: 'A little mouse who has the sole objective of giving you one click per second.',
-        1: 'A small being, drawn to you by your magical power (and your clicks)',
-        2: 'While a little past his prime, he can deliver an impressive amount of clicks'
     }
 }
 
@@ -207,6 +206,7 @@ function numberToName(number){
 //Abilites for buttons at bottom of screen
 class Ability {
     constructor(x, y, rwidth, rheight, number, name, color = 'red'){
+        //Height and width of ability
         this.height = rheight
         this.width = rwidth
         this.x = x
@@ -227,6 +227,16 @@ class Ability {
         this.crit_chance = .1
         this.getStats()
         this.normal_damage = this.damage
+
+        //Dealing with displaying critical hit text
+        this.display_crit_text = false
+        this.removing_crit_text = false
+        this.critical_hit_opacity = 1
+        this.time_started_to_remove_crit_text = 0
+        this.crit_multiplier = 2
+        this.random_range = 45
+        this.randomx = 0
+        this.randomy = 0
     }
 
     
@@ -269,6 +279,7 @@ class Ability {
                 this.ability_just_used = false
             }
         }
+        this.drawCritText()
     }
 
     //Starts the animation which fades the color back to red from blue
@@ -278,16 +289,18 @@ class Ability {
             this.abilityUsedAfterCrit()
             this.percent = 0
             this.last_clicked = Date.now()
+            this.critical_hit_opacity = 1
             this.checkCrit()
+            this.drawCritText()
         }
     }
 
     checkCrit(){
         //Checks for critial hit
-        if(Math.random() < this.crit_chance){
-            this.damage *= 2
+        if(Math.random() <= this.crit_chance){
+            this.damage *= this.crit_multiplier
             abilities.critical_hit[this.number] = true
-            display_crit_text = true
+            this.display_crit_text = true
         }
     }
 
@@ -299,7 +312,7 @@ class Ability {
     getStats(){
         switch (this.name){
             case 'frostbolt':
-                this.damage = 1000
+                this.damage = 10
                 this.crit_chance = 1
                 this.cooldown = 1.3
                 break;
@@ -322,6 +335,33 @@ class Ability {
             this.ability_just_used = true
         }
     }
+
+    drawCritText(){
+        if(this.display_crit_text){
+            this.display_crit_text = false
+            this.randomx = Math.floor(Math.random() * this.random_range) - (this.random_range / 2)
+            this.randomy = Math.floor(Math.random() * this.random_range) - (this.random_range / 2)
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillStyle = 'rgba(255, 197, 50, ' + this.critical_hit_opacity + ')'
+            ctx.fillText('Critical Hit!', (window.innerWidth / 2) - this.randomx - 45, 325 - this.randomy)
+            this.removing_crit_text = true
+            this.time_started_to_remove_crit_text = Date.now()
+        }
+        if (this.removing_crit_text){
+            let placeholder = (Date.now() - this.time_started_to_remove_crit_text) / 1000
+            ctx.beginPath()
+            ctx.font = "20px Arial"
+            ctx.fillStyle = 'rgba(255, 197, 50, ' + this.critical_hit_opacity + ')'
+            ctx.fillText('Critical Hit!', (width / 2) - this.randomx - 45, 325 - 100*placeholder - this.randomy)
+            this.critical_hit_opacity *= 1 - (placeholder / 2)
+            if(placeholder / 2 >= 1){
+                this.removing_crit_text = false
+                this.time_started_to_remove_crit_text = 0
+                this.critical_hit_opacity = 1
+            }
+        }
+    }
 }
 
 class Grunt{
@@ -342,8 +382,6 @@ class Grunt{
         this.death_move_down_pixels = 50
         this.death_time = 0
         this.dying = false
-        this.removing_crit_text = false
-        this.critical_hit_opacity = 1
     }
 
     //Draws 'Grunt' on canvas
@@ -377,7 +415,6 @@ class Grunt{
             this.opacity = 1
             this.dying = false
         }
-        this.drawCritText()
     }
 
     //Health getter
@@ -404,67 +441,54 @@ class Grunt{
             ctx.fillRect(this.x, this.y + this.height + 10, barLength, (this.height / 5))
         }
     }
-
-    drawCritText(){
-        if(display_crit_text){
-            display_crit_text = false
-            ctx.beginPath()
-            ctx.font = "20px Arial"
-            ctx.fillStyle = 'rgba(255, 197, 50, ' + this.critical_hit_opacity + ')'
-            ctx.fillText('Critical Hit!', this.x  - 25, 325)
-            this.removing_crit_text = true
-            this.time_started_to_remove_crit_text = Date.now()
-        } else if (this.removing_crit_text){
-            ctx.beginPath()
-            ctx.font = "20px Arial"
-            ctx.fillStyle = 'rgba(255, 197, 50, ' + this.critical_hit_opacity + ')'
-            ctx.fillText('Critical Hit!', 
-                this.x - 25, 
-                325 - 100*(Date.now() - this.time_started_to_remove_crit_text) / 1000)
-            this.critical_hit_opacity *= 1 - (Date.now() - this.time_started_to_remove_crit_text) / 2000
-            if((Date.now() - this.time_started_to_remove_crit_text) / 2000 >= 1){
-                this.removing_crit_text = false
-                this.time_started_to_remove_crit_text = 0
-                this.critical_hit_opacity = 1
-            }
-        }
-    }
 }
 
 //Switch to change from clicker to dps mode
 class Switcher{
-    constructor(x, y, width, height){
+    constructor(x, y, id){
         this.pressed = false
         this.x = x
         this.y = y
         this.width = 300
         this.height = 20
-        if(clicker_mode){
-            this.text = 'DPS'
-        } else {
-            this.text = 'Clicker'
-        }
+        this.id = id
     }
     
     change(){
-        clicker_mode = !clicker_mode
-        dps_mode = !dps_mode
-        if(clicker_mode){
-            this.text = 'DPS'
+        if(this.id == 'clicker-dps' && (clicker_mode || store_mode)){
+            dps_mode = true
+            clicker_mode = false
+            store_mode = false
+        } else if (this.id == 'clicker-store' && (clicker_mode || dps_mode)){
+            store_mode = true
+            clicker_mode = false
+            dps_mode = false
         } else {
-            this.text = 'Clicker'
+            clicker_mode = true
+            store_mode = false
+            dps_mode = false
         }
     }
 
     draw(){
-        // ctx.beginPath()
-        // ctx.fillStyle = 'red'
-        // ctx.fillRect(this.x, this.y, this.width, this.height)
-        // ctx.beginPath()
-        // ctx.font = "20px Arial"
-        // ctx.fillStyle = 'blue'
-        // ctx.fillText(this.text, this.x, this.y + 20, this.width)
-        ctx.drawImage(to_battlefield, this.x, this.y)
+        if(clicker_mode && this.id == 'clicker-dps'){
+            ctx.drawImage(to_battlefield, this.x, this.y)
+        }
+        if(store_mode && this.id == 'clicker-dps'){
+            ctx.drawImage(to_battlefield, this.x, this.y)
+        }
+        if (dps_mode && this.id == 'clicker-dps'){
+            ctx.drawImage(to_odd_stone, this.x, this.y)
+        } 
+        if (clicker_mode && this.id == 'clicker-store'){
+            ctx.drawImage(to_store, this.x, this.y)
+        } 
+        if (store_mode && this.id == 'clicker-store'){
+            ctx.drawImage(to_odd_stone, this.x, this.y)
+        }
+        if (dps_mode && this.id == 'clicker-store'){
+            ctx.drawImage(to_store, this.x, this.y)
+        } 
     }
 
     press(){
@@ -587,6 +611,7 @@ class ClickerUpgrade{
             this.addClicks()
         }
         this.show()
+        this.showDescriptionBox()
     }
 
     addClicks(){
@@ -601,9 +626,20 @@ class ClickerUpgrade{
             this.pressed = true
             this.purchased += 1
             clicks -= upgrades.cost[this.number]
+            upgrades.cost[this.number] += Math.floor(Math.pow(1.4, this.purchased))
         }
         if(state.pressedMouse['zero']){
             this.pressed = false
+        }
+    }
+
+    showDescriptionBox(){
+        if((mouse_move_x_position >= this.x && mouse_move_x_position <= this.x + this.width)
+            && (mouse_move_y_position >= this.y && mouse_move_y_position < this.y + this.height)
+            && this.shown){
+            ctx.beginPath()
+            ctx.fillStyle = 'red'
+            ctx.fillRect(mouse_move_x_position, mouse_move_y_position, 100, 100)
         }
     }
 
@@ -627,6 +663,7 @@ function keyup(event){
     state.pressedKeys[key] = false
 }
 
+//Detected mouse down
 function onDown(event) {
     if(event.button == 0){
         state.pressedMouse['zero']= true
@@ -635,10 +672,17 @@ function onDown(event) {
     }
 }
 
+//Detects mouse up
 function onUp(event){
     if(event.button == 0){
         state.pressedMouse['zero']= false
     }
+}
+
+//Detects mouse move
+function onMove(event){
+    mouse_move_x_position = event.clientX
+    mouse_move_y_position = event.clientY
 }
 
 //Adds event listener to detect key presses
@@ -646,6 +690,7 @@ window.addEventListener('keydown', keydown, false)
 window.addEventListener('keyup', keyup, false)
 window.addEventListener('mousedown', onDown, false)
 window.addEventListener('mouseup', onUp, false)
+window.addEventListener('mousemove', onMove, false)
 
 //Update the state of the world for the elapsed time since last render
 function update(progress){
@@ -688,6 +733,7 @@ function update(progress){
     //Detects mouse press
     if(state.pressedMouse.zero){
         switch_array[0].press()
+        switch_array[1].press()
         clicker_array[0].press()
         for(i = 0; i < upgrade_array.length; i++){
             upgrade_array[i].press()
@@ -706,12 +752,12 @@ function update(progress){
 
     
     switch_array[0].press()
+    switch_array[1].press()
     clicker_array[0].press()
     for(i = 0; i < upgrade_array.length; i++){
         upgrade_array[i].press()
         upgrade_array[i].addClicks()
     }
-
 }
 
 //Creates num_abl number of ability classes and stores them in abl_array
@@ -748,11 +794,15 @@ function draw_enemies(x, y, a, b, num_enemies){
 
 function draw_switch(){
     if(first_pass){
-        let switch1 = new Switcher(canvas.width - 230, 20, 50, 50)
+        let switch1 = new Switcher(canvas.width - 230, 20, 'clicker-dps')
         switch_array.push(switch1)
         switch1.draw()
+        let switch2 = new Switcher(canvas.width - 230, 50, 'clicker-store')
+        switch_array.push(switch2)
+        switch2.draw()
     } else {
         switch_array[0].draw()
+        switch_array[1].draw()
     }
 }
 
@@ -780,6 +830,10 @@ function draw_upgrades(){
     }
 }
 
+function draw_store(){
+    console.log('Attempted to draw the store')
+}
+
 //Draw the state of the world
 function draw(){
     ctx.fillStyle = '#5f5f5f'
@@ -787,9 +841,11 @@ function draw(){
     if(dps_mode){
         draw_abls()
         draw_enemies()
-    } else {
+    } else if (clicker_mode){
         draw_clicker()
         draw_upgrades()
+    } else if (store_mode){
+        draw_store()
     }
     draw_switch()
 }
