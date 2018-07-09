@@ -26,11 +26,18 @@ var dps_mode = false
 var dps_upgrades_menu = false
 var store_mode = false
 
+//Something upgraded
+var something_upgraded = false
+var upgraded_name = ''
+
 //User values regarding clicker
 var click_value = 1
 var num_upgrades = 10
 var total_clicks = 0
 var clicks = 0
+
+//Global changes from the shop
+var cooldown_reduction = 0
 
 //Setting up images
 var frame = new Image()
@@ -57,6 +64,7 @@ var enemy_array = []
 var switch_array = []
 var clicker_array = []
 var upgrade_array = []
+var items_array = []
 
 //Basic keymap of all top keyboard numbers
 var keyMap = {
@@ -148,6 +156,25 @@ var upgrades = {
     }
 }
 
+var universial_upgrades = {
+    items: 1,
+    names: {
+        tome_of_knowledge: 'Tome of Knowledge'
+    }, 
+    bought: {
+        tome_of_knowledge: false
+    },
+    values: {
+        tome_of_knowledge: 100
+    },
+    applied_to_player: {
+        tome_of_knowledge: false
+    },
+    effect: {
+        tome_of_knowledge: 'cooldown, -0.2'
+    }
+}
+
 //Get HTML canvas object
 var canvas = document.getElementById("canvas")
 
@@ -200,6 +227,19 @@ function numberToName(number){
         case 0:
             return "zero"
             break
+    }
+}
+
+function upgradeUniversialAbilites(){
+    if(something_upgraded){
+        console.log('something upgraded')
+        let command = universial_upgrades.effect[upgraded_name]
+        let commands = command.split(', ')
+        console.log(commands)
+        for(i = 0; i < abl_array.length; i++){
+            abl_array[i].changeStats(commands[0], Number(commands[1]))
+        }
+        something_upgraded = false 
     }
 }
 
@@ -360,6 +400,14 @@ class Ability {
                 this.time_started_to_remove_crit_text = 0
                 this.critical_hit_opacity = 1
             }
+        }
+    }
+    
+    changeStats(stat, how_much){
+        if(stat == 'cooldown'){
+            console.log(this.cooldown)
+            this.cooldown += how_much
+            console.log(this.cooldown)
         }
     }
 }
@@ -651,6 +699,49 @@ class ClickerUpgrade{
     }
 }
 
+class Item{
+    constructor(){
+        this.name = 'tome_of_knowledge'
+        this.bought = false
+        this.x = 100
+        this.y = 100
+        this.height = 20
+        this.width = 300
+    }
+
+    update(){
+        this.draw()
+        this.checkToUpgrade()
+    }
+
+    draw(){
+        ctx.beginPath()
+        ctx.fillStyle = 'blue'
+        ctx.fillRect(100, 100, 300, 20)
+        ctx.beginPath()
+        ctx.font = '20px Arial'
+        ctx.fillStyle = 'red'
+        ctx.fillText(universial_upgrades.names[this.name], 100, 20 +100)
+    }
+
+    checkToUpgrade(){
+        if(this.mouseOver() && store_mode && !this.bought && state.pressedMouse['zero']){
+            this.bought = true
+            universial_upgrades.bought[this.name] = true
+            something_upgraded = true
+            upgraded_name = this.name
+        }
+    }
+
+    mouseOver(){
+        if((mouse_move_x_position >= this.x && mouse_move_x_position <= this.x + this.width)
+        && (mouse_move_y_position >= this.y && mouse_move_y_position < this.y + this.height)){
+            return true
+        }
+        return false
+    }
+}
+
 //Detects keydown events
 function keydown(event){
     var key = keyMap[event.keyCode]
@@ -758,6 +849,7 @@ function update(progress){
         upgrade_array[i].press()
         upgrade_array[i].addClicks()
     }
+    upgradeUniversialAbilites()
 }
 
 //Creates num_abl number of ability classes and stores them in abl_array
@@ -818,9 +910,11 @@ function draw_clicker(){
 
 function draw_upgrades(){
     if(first_pass){
-        for(i = 0; i < num_upgrades; i++){
+        for(i = num_upgrades - 1; i >= 0; i--){
             let upgrade = new ClickerUpgrade(10, 50 + (50 * i), i)
             upgrade_array.push(upgrade)
+        }
+        for(i = 0; i < num_upgrades; i++){
             upgrade_array[i].draw()
         }
     } else {
@@ -831,7 +925,13 @@ function draw_upgrades(){
 }
 
 function draw_store(){
-    console.log('Attempted to draw the store')
+    if(first_pass){
+        let item1 = new Item()
+        items_array.push(item1)
+        item1.update()
+    } else {
+        items_array[0].update()
+    }
 }
 
 //Draw the state of the world
@@ -857,6 +957,7 @@ function init(){
     draw_switch()
     draw_clicker()
     draw_upgrades()
+    draw_store()
 
     //All first pass logic should be above this variable
     first_pass = false
